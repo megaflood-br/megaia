@@ -46,6 +46,9 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ ok: true, skipped: "no text" });
   }
 
+  const text = incoming.text;
+  const from = incoming.from;
+
   const agent = tenant.agents[0];
   if (!agent) {
     return NextResponse.json({ ok: true, skipped: "no agent" });
@@ -54,7 +57,7 @@ export async function POST(req: Request, ctx: Ctx) {
   let conversation = await prisma.conversation.findFirst({
     where: {
       tenantId: tenant.id,
-      externalId: incoming.from,
+      externalId: from,
       status: { in: ["open", "handoff"] },
     },
     orderBy: { updatedAt: "desc" },
@@ -77,7 +80,7 @@ export async function POST(req: Request, ctx: Ctx) {
     if (
       isBotOutboundEcho({
         fromMe: true,
-        text: incoming.text,
+        text,
         messageId: incoming.messageId,
         recentAssistant,
       })
@@ -86,7 +89,7 @@ export async function POST(req: Request, ctx: Ctx) {
         const match = recentAssistant.find(
           (m) =>
             m.externalMsgId === incoming.messageId ||
-            m.content.trim() === incoming.text.trim()
+            m.content.trim() === text.trim()
         );
         if (match && !match.externalMsgId && incoming.messageId) {
           await prisma.message.updateMany({
@@ -107,7 +110,7 @@ export async function POST(req: Request, ctx: Ctx) {
       data: {
         conversationId: conversation.id,
         role: "human",
-        content: incoming.text,
+        content: text,
         externalMsgId: incoming.messageId,
       },
     });
@@ -124,9 +127,9 @@ export async function POST(req: Request, ctx: Ctx) {
         tenantId: tenant.id,
         agentId: agent.id,
         channel: "whatsapp",
-        externalId: incoming.from,
+        externalId: from,
         contactName: incoming.pushName,
-        contactPhone: incoming.from.replace("@s.whatsapp.net", ""),
+        contactPhone: from.replace("@s.whatsapp.net", ""),
         status: "open",
       },
     });
@@ -137,7 +140,7 @@ export async function POST(req: Request, ctx: Ctx) {
       data: {
         conversationId: conversation.id,
         role: "user",
-        content: incoming.text,
+        content: text,
         externalMsgId: incoming.messageId,
       },
     });
@@ -152,7 +155,7 @@ export async function POST(req: Request, ctx: Ctx) {
     data: {
       conversationId: conversation.id,
       role: "user",
-      content: incoming.text,
+      content: text,
       externalMsgId: incoming.messageId,
     },
   });
@@ -166,7 +169,7 @@ export async function POST(req: Request, ctx: Ctx) {
   const reply = await generateAgentReply({
     tenantId: tenant.id,
     agentId: agent.id,
-    userMessage: incoming.text,
+    userMessage: text,
     history: history
       .filter((m) => m.role === "user" || m.role === "assistant")
       .slice(0, -1)
@@ -195,7 +198,7 @@ export async function POST(req: Request, ctx: Ctx) {
   try {
     const sent = await sendWhatsAppText(
       tenant.evolutionConfig,
-      incoming.from,
+      from,
       reply.content
     );
     const sentId = extractSentMessageId(sent);
