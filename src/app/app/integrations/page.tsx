@@ -28,6 +28,10 @@ export default async function IntegrationsPage() {
         initial={safe}
         tenantSlug={user.tenant.slug}
         appUrl={process.env.APP_URL || "http://localhost:3000"}
+        defaults={{
+          apiUrl: process.env.EVOLUTION_API_URL || undefined,
+          instanceName: user.tenant.slug,
+        }}
       />
     </div>
   );

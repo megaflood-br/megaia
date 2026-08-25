@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  extractQrPayload,
   extractSentMessageId,
   isBotOutboundEcho,
+  parseEvolutionConnectionState,
   parseIncomingWebhook,
 } from "./evolution";
 
@@ -123,5 +125,36 @@ describe("extractSentMessageId", () => {
       extractSentMessageId({ message: { key: { id: "AAA" } } }),
       "AAA"
     );
+  });
+});
+
+describe("parseEvolutionConnectionState", () => {
+  it("reads instance.state", () => {
+    assert.equal(
+      parseEvolutionConnectionState({ instance: { state: "open" } }),
+      "open"
+    );
+    assert.equal(
+      parseEvolutionConnectionState({ instance: { status: "connecting" } }),
+      "connecting"
+    );
+    assert.equal(parseEvolutionConnectionState({ state: "close" }), "close");
+  });
+});
+
+describe("extractQrPayload", () => {
+  it("prefers qrcode.base64 and prefixes data URI", () => {
+    const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const qr = extractQrPayload({
+      qrcode: { base64: png, code: "2@not-an-image" },
+      pairingCode: "WZYEH1YY",
+    });
+    assert.equal(qr.base64, `data:image/png;base64,${png}`);
+    assert.equal(qr.pairingCode, "WZYEH1YY");
+  });
+
+  it("does not treat raw pairing code as an image", () => {
+    const qr = extractQrPayload({ qrcode: { code: "2@y8eK+bjtEjUWy9/FOM" } });
+    assert.equal(qr.base64, undefined);
   });
 });
