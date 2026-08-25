@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
-import { getInstanceConnectionState } from "@/lib/evolution";
+import {
+  getInstanceConnectionState,
+  parseEvolutionConnectionState,
+  setInstanceWebhook,
+} from "@/lib/evolution";
+import { tenantWebhookUrl } from "./shared";
 
 const schema = z.object({
   apiUrl: z.string().url(),
@@ -24,7 +29,7 @@ export async function GET() {
   return NextResponse.json({
     ...config,
     apiKey: config.apiKey ? "••••••••" + config.apiKey.slice(-4) : "",
-    webhookUrl: `${process.env.APP_URL || "http://localhost:3000"}/api/webhooks/evolution/${user.tenant.slug}`,
+    webhookUrl: tenantWebhookUrl(user.tenant.slug),
   });
 }
 
@@ -56,16 +61,20 @@ export async function PUT(req: Request) {
       instanceName: body.instanceName,
     };
 
+    const webhookUrl = tenantWebhookUrl(user.tenant.slug);
+
     let isConnected = false;
     try {
-      const state = (await getInstanceConnectionState(credentials)) as {
-        instance?: { state?: string };
-        state?: string;
-      };
-      const s = state?.instance?.state || state?.state;
-      isConnected = s === "open" || s === "connected";
+      const state = await getInstanceConnectionState(credentials);
+      isConnected = parseEvolutionConnectionState(state) === "open";
     } catch {
       isConnected = false;
+    }
+
+    try {
+      await setInstanceWebhook(credentials, webhookUrl, body.webhookSecret);
+    } catch {
+      /* instance may not exist yet — connect will create and set webhook */
     }
 
     const config = await prisma.evolutionConfig.upsert({
@@ -92,7 +101,7 @@ export async function PUT(req: Request) {
     return NextResponse.json({
       ok: true,
       isConnected: config.isConnected,
-      webhookUrl: `${process.env.APP_URL || "http://localhost:3000"}/api/webhooks/evolution/${user.tenant.slug}`,
+      webhookUrl,
     });
   } catch (err) {
     if (err instanceof z.ZodError) {

@@ -29,6 +29,7 @@ export function AgentsManager({ initialAgents }: { initialAgents: Agent[] }) {
   const [selectedId, setSelectedId] = useState(initialAgents[0]?.id || "");
   const selected = agents.find((a) => a.id === selectedId) || null;
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [msg, setMsg] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [chatLog, setChatLog] = useState<{ role: string; content: string }[]>(
@@ -91,6 +92,29 @@ export function AgentsManager({ initialAgents }: { initialAgents: Agent[] }) {
     const updated = await res.json();
     setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
     setMsg("Salvo");
+    router.refresh();
+  }
+
+  async function deleteAgent() {
+    if (!selected) return;
+    const ok = window.confirm(
+      `Excluir o agente “${selected.name}”? As conversas dele também serão apagadas.`
+    );
+    if (!ok) return;
+    setDeleting(true);
+    setMsg("");
+    const res = await fetch(`/api/agents/${selected.id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (!res.ok) {
+      setMsg("Erro ao excluir");
+      return;
+    }
+    const remaining = agents.filter((a) => a.id !== selected.id);
+    setAgents(remaining);
+    setSelectedId(remaining[0]?.id || "");
+    setChatLog([]);
+    setConversationId(undefined);
+    setMsg("");
     router.refresh();
   }
 
@@ -311,11 +335,27 @@ export function AgentsManager({ initialAgents }: { initialAgents: Agent[] }) {
               ))}
             </div>
 
-            <div className="flex items-center gap-3">
-              <button type="submit" className="btn btn-primary" disabled={saving}>
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="submit" className="btn btn-primary" disabled={saving || deleting}>
                 {saving ? "Salvando…" : "Salvar agente"}
               </button>
-              {msg && <span className="text-sm text-[var(--ok)]">{msg}</span>}
+              <button
+                type="button"
+                className="btn btn-danger"
+                disabled={saving || deleting}
+                onClick={deleteAgent}
+              >
+                {deleting ? "Excluindo…" : "Excluir agente"}
+              </button>
+              {msg && (
+                <span
+                  className={`text-sm ${
+                    msg.startsWith("Erro") ? "text-[var(--coral)]" : "text-[var(--ok)]"
+                  }`}
+                >
+                  {msg}
+                </span>
+              )}
             </div>
           </form>
 
