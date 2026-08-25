@@ -33,14 +33,15 @@ Acesse [http://localhost:3000](http://localhost:3000).
 
 ## Evolution API
 
-1. Em **Integrações**, informe URL, API key e nome da instância
-2. Configure o webhook da Evolution para:
+1. Em **Integrações**, salve URL, API key e nome da instância
+2. Clique em **Conectar WhatsApp** e escaneie o **QR Code** no painel
+3. O Nexo registra o webhook automaticamente:
 
 ```
 {APP_URL}/api/webhooks/evolution/{tenantSlug}
 ```
 
-3. Evento recomendado: `MESSAGES_UPSERT`
+Evento principal: `MESSAGES_UPSERT`
 
 ## Modelo de tenant
 

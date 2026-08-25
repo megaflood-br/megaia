@@ -21,7 +21,7 @@ export default async function IntegrationsPage() {
       <header>
         <h1 className="font-display text-3xl font-semibold">Integrações</h1>
         <p className="mt-2 text-[var(--ink-soft)]/70">
-          Evolution API (WhatsApp) e OpenAI para o cérebro do agente.
+          Evolution API com QR Code no painel, WhatsApp e OpenAI.
         </p>
       </header>
       <EvolutionForm
