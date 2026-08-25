@@ -1,0 +1,205 @@
+// Nexo — plataforma multitenant de agentes de IA
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("starter") // starter | pro | business
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users           User[]
+  agents          Agent[]
+  knowledgeItems  KnowledgeItem[]
+  products        Product[]
+  services        Service[]
+  conversations   Conversation[]
+  evolutionConfig EvolutionConfig?
+  companyProfile  CompanyProfile?
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("owner") // owner | admin | agent
+  tenantId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessions Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CompanyProfile {
+  id          String  @id @default(cuid())
+  tenantId    String  @unique
+  tradeName   String?
+  legalName   String?
+  document    String? // CNPJ/CPF
+  phone       String?
+  email       String?
+  website     String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  description String?
+  mission     String?
+  differentials String?
+  businessHours String? // JSON: { mon: {open,close}, ... }
+  timezone    String  @default("America/Sao_Paulo")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Agent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  name            String
+  slug            String
+  avatarUrl       String?
+  avatarEmoji     String?  @default("🤖")
+  roleTitle       String?  // "Consultora de vendas"
+  personality     String?  // tom de voz
+  systemPrompt    String?
+  welcomeMessage  String?
+  fallbackMessage String?  @default("Vou transferir você para um atendente humano.")
+  model           String   @default("gpt-4o-mini")
+  temperature     Float    @default(0.4)
+  maxTokens       Int      @default(800)
+  isActive        Boolean  @default(true)
+  handoffEnabled  Boolean  @default(true)
+  handoffKeywords String?  // JSON array
+  useKnowledge    Boolean  @default(true)
+  useCatalog      Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@unique([tenantId, slug])
+}
+
+model KnowledgeItem {
+  id        String   @id @default(cuid())
+  tenantId  String
+  title     String
+  category  String   @default("geral") // empresa | faq | politica | processo | outro
+  content   String
+  tags      String?  // comma-separated
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  sku         String?
+  description String?
+  category    String?
+  price       Float
+  compareAt   Float?
+  currency    String   @default("BRL")
+  unit        String?  // un, kg, m²
+  inStock     Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  metadata    String?  // JSON extra
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  category    String?
+  price       Float
+  priceType   String   @default("fixed") // fixed | from | hourly | quote
+  currency    String   @default("BRL")
+  durationMin Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model EvolutionConfig {
+  id           String   @id @default(cuid())
+  tenantId     String   @unique
+  apiUrl       String
+  apiKey       String
+  instanceName String
+  webhookSecret String?
+  isConnected  Boolean  @default(false)
+  lastSyncAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id            String   @id @default(cuid())
+  tenantId      String
+  agentId       String
+  channel       String   @default("whatsapp") // whatsapp | web | api
+  externalId    String?  // WhatsApp JID / phone
+  contactName   String?
+  contactPhone  String?
+  status        String   @default("open") // open | handoff | closed
+  summary       String?
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([tenantId, status])
+  @@index([externalId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // user | assistant | system | human
+  content        String
+  externalMsgId  String?
+  metadata       String?
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}

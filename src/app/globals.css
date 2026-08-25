@@ -1,0 +1,240 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #0c1b2a;
+  --ink-soft: #1a3348;
+  --teal: #0d7377;
+  --teal-deep: #095456;
+  --mint: #2ec4b6;
+  --mint-soft: #d8f5f1;
+  --sand: #f4f1eb;
+  --paper: #faf9f6;
+  --line: #d5dde3;
+  --coral: #e85d4c;
+  --ok: #1f8a5b;
+  --warn: #c9851a;
+  --background: var(--paper);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-teal: var(--teal);
+  --color-teal-deep: var(--teal-deep);
+  --color-mint: var(--mint);
+  --color-mint-soft: var(--mint-soft);
+  --color-sand: var(--sand);
+  --color-paper: var(--paper);
+  --color-line: var(--line);
+  --color-coral: var(--coral);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --font-sans: var(--font-figtree);
+  --font-display: var(--font-syne);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-figtree), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-syne), var(--font-figtree), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--mint) 35%, white);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(12px, -10px, 0) scale(1.04);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.animate-rise {
+  animation: rise 0.7s ease-out both;
+}
+
+.animate-rise-delay {
+  animation: rise 0.8s ease-out 0.15s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise 0.85s ease-out 0.3s both;
+}
+
+.blob {
+  animation: drift 14s ease-in-out infinite;
+}
+
+.blob-delay {
+  animation: drift 18s ease-in-out infinite reverse;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--mint) 35%, transparent);
+}
+
+.textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  color: var(--ink);
+  outline: none;
+  min-height: 110px;
+  resize: vertical;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.textarea:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--mint) 35%, transparent);
+}
+
+.label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  padding: 0.7rem 1.2rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+  transition: transform 0.15s, background 0.15s, color 0.15s, opacity 0.15s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--teal-deep);
+}
+
+.btn-accent {
+  background: var(--mint);
+  color: var(--ink);
+}
+
+.btn-accent:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--mint) 80%, var(--ink));
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: white;
+}
+
+.btn-danger {
+  background: color-mix(in oklab, var(--coral) 12%, white);
+  color: var(--coral);
+}
+
+.surface {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  color: color-mix(in oklab, white 72%, transparent);
+  transition: background 0.15s, color 0.15s;
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+
+.nav-link:hover {
+  background: color-mix(in oklab, white 8%, transparent);
+  color: white;
+}
+
+.nav-link.active {
+  background: color-mix(in oklab, var(--mint) 22%, transparent);
+  color: white;
+}
