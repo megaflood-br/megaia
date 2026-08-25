@@ -40,6 +40,14 @@ prisma/*.db-journal
 *.db
 *.db-journal
 
+# prisma CLI skill clutter
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
+AGENTS.md
+CLAUDE.md
+
 # vercel
 .vercel
 
