@@ -36,6 +36,27 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ ok: true, skipped: "invalid json" });
   }
 
+  // Atualiza status de conexão quando a Evolution notifica
+  const eventName = String(
+    (body as { event?: string; type?: string })?.event ||
+      (body as { type?: string })?.type ||
+      ""
+  ).toLowerCase();
+
+  if (
+    eventName.includes("connection") ||
+    eventName.includes("connection.update")
+  ) {
+    const data = (body as { data?: { state?: string; status?: string } })?.data;
+    const state = String(data?.state || data?.status || "").toLowerCase();
+    const isConnected = state === "open" || state === "connected";
+    await prisma.evolutionConfig.update({
+      where: { tenantId: tenant.id },
+      data: { isConnected, lastSyncAt: new Date() },
+    });
+    return NextResponse.json({ ok: true, connectionUpdated: isConnected });
+  }
+
   const incoming = parseIncomingWebhook(body);
   if (!incoming?.text || !incoming.from) {
     return NextResponse.json({ ok: true, skipped: "no text" });
