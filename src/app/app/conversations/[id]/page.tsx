@@ -39,6 +39,12 @@ export default async function ConversationDetailPage({ params }: Props) {
             {conversation.agent.avatarEmoji} {conversation.agent.name} ·{" "}
             {conversation.channel} · {conversation.status}
           </p>
+          {conversation.status === "handoff" && (
+            <p className="mt-2 max-w-xl text-sm text-amber-800">
+              IA pausada. Respostas enviadas por você no WhatsApp entram como
+              atendente. Use Reabrir / IA para a IA voltar a responder.
+            </p>
+          )}
         </div>
         <ConversationActions
           id={conversation.id}
@@ -59,7 +65,13 @@ export default async function ConversationDetailPage({ params }: Props) {
             }`}
           >
             <p className="mb-1 text-[10px] uppercase tracking-wide opacity-60">
-              {m.role}
+              {m.role === "user"
+                ? "Cliente"
+                : m.role === "human"
+                  ? "Atendente"
+                  : m.role === "assistant"
+                    ? "Agente"
+                    : m.role}
             </p>
             <p className="whitespace-pre-wrap">{m.content}</p>
           </div>

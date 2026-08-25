@@ -62,6 +62,69 @@ export async function sendWhatsAppText(
   );
 }
 
+/** Evolution v2 sendText may wrap the key at the root, under message, or in an array. */
+export function extractSentMessageId(data: unknown): string | undefined {
+  const visit = (value: unknown, depth = 0): string | undefined => {
+    if (!value || depth > 4) return undefined;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = visit(item, depth + 1);
+        if (found) return found;
+      }
+      return undefined;
+    }
+    if (typeof value !== "object") return undefined;
+    const obj = value as Record<string, unknown>;
+    const key = obj.key;
+    if (key && typeof key === "object") {
+      const id = (key as Record<string, unknown>).id;
+      if (typeof id === "string" && id) return id;
+    }
+    return visit(obj.message, depth + 1) || visit(obj.data, depth + 1);
+  };
+  return visit(data);
+}
+
+export function normalizeWhatsAppText(text: string) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+type AssistantEchoCandidate = {
+  content: string;
+  externalMsgId: string | null;
+  createdAt: Date;
+};
+
+/** Echo of a bot sendText (fromMe + same id or same recent text). Human replies are fromMe too. */
+export function isBotOutboundEcho(params: {
+  fromMe: boolean;
+  text: string;
+  messageId?: string;
+  recentAssistant?: AssistantEchoCandidate[];
+  maxAgeMs?: number;
+}): boolean {
+  if (!params.fromMe) return false;
+  const text = normalizeWhatsAppText(params.text);
+  if (!text) return true;
+
+  const maxAgeMs = params.maxAgeMs ?? 5 * 60 * 1000;
+  const now = Date.now();
+
+  for (const msg of params.recentAssistant ?? []) {
+    if (
+      params.messageId &&
+      msg.externalMsgId &&
+      params.messageId === msg.externalMsgId
+    ) {
+      return true;
+    }
+    if (normalizeWhatsAppText(msg.content) !== text) continue;
+    const age = now - new Date(msg.createdAt).getTime();
+    if (age >= 0 && age < maxAgeMs) return true;
+  }
+  return false;
+}
+
 export async function getInstanceConnectionState(config: EvolutionConfigLike) {
   return evolutionRequest(
     config,
@@ -105,7 +168,7 @@ export function parseIncomingWebhook(body: unknown): {
   const from = (key.remoteJid as string) || undefined;
   const fromMe = Boolean(key.fromMe);
 
-  if (!from || fromMe) return null;
+  if (!from) return null;
   if (from.endsWith("@g.us")) return null; // ignore groups for MVP
 
   return {

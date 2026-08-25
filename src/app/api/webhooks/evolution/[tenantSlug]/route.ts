@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { parseIncomingWebhook, sendWhatsAppText } from "@/lib/evolution";
+import {
+  extractSentMessageId,
+  isBotOutboundEcho,
+  parseIncomingWebhook,
+  sendWhatsAppText,
+} from "@/lib/evolution";
 import { generateAgentReply } from "@/lib/openai";
 
 type Ctx = { params: Promise<{ tenantSlug: string }> };
@@ -54,6 +59,64 @@ export async function POST(req: Request, ctx: Ctx) {
     },
     orderBy: { updatedAt: "desc" },
   });
+
+  // Outbound WhatsApp (fromMe): never open a new thread. Echo of the bot is ignored;
+  // a human typing in the same chat pauses the AI.
+  if (incoming.fromMe) {
+    if (!conversation) {
+      return NextResponse.json({ ok: true, skipped: "fromMe without conversation" });
+    }
+
+    const recentAssistant = await prisma.message.findMany({
+      where: { conversationId: conversation.id, role: "assistant" },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: { content: true, externalMsgId: true, createdAt: true },
+    });
+
+    if (
+      isBotOutboundEcho({
+        fromMe: true,
+        text: incoming.text,
+        messageId: incoming.messageId,
+        recentAssistant,
+      })
+    ) {
+      if (incoming.messageId) {
+        const match = recentAssistant.find(
+          (m) =>
+            m.externalMsgId === incoming.messageId ||
+            m.content.trim() === incoming.text.trim()
+        );
+        if (match && !match.externalMsgId && incoming.messageId) {
+          await prisma.message.updateMany({
+            where: {
+              conversationId: conversation.id,
+              role: "assistant",
+              content: match.content,
+              externalMsgId: null,
+            },
+            data: { externalMsgId: incoming.messageId },
+          });
+        }
+      }
+      return NextResponse.json({ ok: true, skipped: "bot echo" });
+    }
+
+    await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        role: "human",
+        content: incoming.text,
+        externalMsgId: incoming.messageId,
+      },
+    });
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { lastMessageAt: new Date(), status: "handoff" },
+    });
+    return NextResponse.json({ ok: true, handoff: true, pausedBy: "whatsapp" });
+  }
 
   if (!conversation) {
     conversation = await prisma.conversation.create({
@@ -113,7 +176,7 @@ export async function POST(req: Request, ctx: Ctx) {
       })),
   });
 
-  await prisma.message.create({
+  const assistantMsg = await prisma.message.create({
     data: {
       conversationId: conversation.id,
       role: "assistant",
@@ -130,11 +193,18 @@ export async function POST(req: Request, ctx: Ctx) {
   });
 
   try {
-    await sendWhatsAppText(
+    const sent = await sendWhatsAppText(
       tenant.evolutionConfig,
       incoming.from,
       reply.content
     );
+    const sentId = extractSentMessageId(sent);
+    if (sentId) {
+      await prisma.message.update({
+        where: { id: assistantMsg.id },
+        data: { externalMsgId: sentId },
+      });
+    }
   } catch (err) {
     console.error("Falha ao enviar WhatsApp:", err);
   }
