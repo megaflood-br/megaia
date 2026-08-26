@@ -70,8 +70,11 @@ export async function POST(req: Request, ctx: Ctx) {
       return NextResponse.json({ ok: true, skipped: "fromMe without conversation" });
     }
 
-    const recentAssistant = await prisma.message.findMany({
-      where: { conversationId: conversation.id, role: "assistant" },
+    const recentOutbound = await prisma.message.findMany({
+      where: {
+        conversationId: conversation.id,
+        role: { in: ["assistant", "human"] },
+      },
       orderBy: { createdAt: "desc" },
       take: 8,
       select: { content: true, externalMsgId: true, createdAt: true },
@@ -82,11 +85,11 @@ export async function POST(req: Request, ctx: Ctx) {
         fromMe: true,
         text,
         messageId: incoming.messageId,
-        recentAssistant,
+        recentAssistant: recentOutbound,
       })
     ) {
       if (incoming.messageId) {
-        const match = recentAssistant.find(
+        const match = recentOutbound.find(
           (m) =>
             m.externalMsgId === incoming.messageId ||
             m.content.trim() === text.trim()
@@ -95,7 +98,7 @@ export async function POST(req: Request, ctx: Ctx) {
           await prisma.message.updateMany({
             where: {
               conversationId: conversation.id,
-              role: "assistant",
+              role: { in: ["assistant", "human"] },
               content: match.content,
               externalMsgId: null,
             },

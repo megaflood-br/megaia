@@ -23,7 +23,7 @@ const links = [
   { href: "/app/company", label: "Empresa", icon: Building2 },
   { href: "/app/knowledge", label: "Conhecimento", icon: BookOpen },
   { href: "/app/catalog", label: "Catálogo", icon: Tags },
-  { href: "/app/conversations", label: "Conversas", icon: MessageSquare },
+  { href: "/app/conversations", label: "Inbox", icon: MessageSquare },
   { href: "/app/integrations", label: "Integrações", icon: Plug },
 ];
 
