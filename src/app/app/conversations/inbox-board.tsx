@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { relativeTime } from "@/lib/utils";
+import { stageLabel } from "@/lib/crm";
 import { useWhenVisibleInterval } from "@/lib/use-when-visible-interval";
 
 type Row = {
@@ -13,6 +14,12 @@ type Row = {
   contactPhone: string | null;
   lastMessageAt: string;
   agent: { name: string; avatarEmoji: string | null };
+  contact: {
+    id: string;
+    name: string;
+    stage: string;
+    company: string | null;
+  } | null;
   messages: { role: string; content: string }[];
 };
 
@@ -62,8 +69,8 @@ export function InboxBoard({ initialTab }: { initialTab: string }) {
       <header>
         <h1 className="font-display text-3xl font-semibold">Inbox</h1>
         <p className="mt-2 text-[var(--ink-soft)]/70">
-          Atenda o cliente por aqui. A lista atualiza sozinha quando chega
-          mensagem nova.
+          Atenda o cliente por aqui. Cada conversa tem uma ficha de CRM com os
+          dados importantes. A lista atualiza sozinha quando chega mensagem nova.
         </p>
       </header>
 
@@ -110,10 +117,12 @@ export function InboxBoard({ initialTab }: { initialTab: string }) {
               <div className="min-w-0">
                 <p className="truncate font-medium">
                   {c.agent.avatarEmoji}{" "}
-                  {c.contactName || c.contactPhone || "Contato"}
+                  {c.contact?.name || c.contactName || c.contactPhone || "Contato"}
                 </p>
                 <p className="truncate text-sm text-[var(--ink-soft)]/60">
-                  via {c.channel} · {last?.content || "—"}
+                  via {c.channel}
+                  {c.contact?.company ? ` · ${c.contact.company}` : ""} ·{" "}
+                  {last?.content || "—"}
                 </p>
               </div>
               <div className="shrink-0 text-right">
@@ -128,6 +137,11 @@ export function InboxBoard({ initialTab }: { initialTab: string }) {
                 >
                   {waiting && c.status !== "closed" ? "aguardando" : c.status}
                 </span>
+                {c.contact?.stage && (
+                  <p className="mt-1 text-[11px] font-medium text-[var(--ink-soft)]/55">
+                    {stageLabel(c.contact.stage)}
+                  </p>
+                )}
                 <p className="mt-1 text-xs text-[var(--ink-soft)]/45">
                   {relativeTime(c.lastMessageAt)}
                 </p>

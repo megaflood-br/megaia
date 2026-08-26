@@ -23,6 +23,7 @@ model Tenant {
   products        Product[]
   services        Service[]
   conversations   Conversation[]
+  contacts        Contact[]
   evolutionConfig EvolutionConfig?
   companyProfile  CompanyProfile?
 }
@@ -168,6 +169,30 @@ model EvolutionConfig {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
+model Contact {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String   @default("")
+  phone     String?
+  email     String?
+  document  String?
+  company   String?
+  stage     String   @default("lead") // lead | atendimento | proposta | cliente | perdido
+  tags      String   @default("")
+  notes     String   @default("")
+  source    String   @default("inbox") // inbox | whatsapp | web | manual
+  fields    String   @default("[]") // JSON [{label,value}]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId, stage])
+  @@index([tenantId, updatedAt])
+}
+
 model Conversation {
   id            String   @id @default(cuid())
   tenantId      String
@@ -176,6 +201,7 @@ model Conversation {
   externalId    String?  // WhatsApp JID / phone
   contactName   String?
   contactPhone  String?
+  contactId     String?
   status        String   @default("open") // open | handoff | closed
   summary       String?
   lastMessageAt DateTime @default(now())
@@ -184,10 +210,12 @@ model Conversation {
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  contact  Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
   messages Message[]
 
   @@index([tenantId, status])
   @@index([externalId])
+  @@index([contactId])
 }
 
 model Message {

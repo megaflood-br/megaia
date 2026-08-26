@@ -7,6 +7,7 @@ import {
   sendWhatsAppText,
 } from "@/lib/evolution";
 import { generateAgentReply } from "@/lib/openai";
+import { attachConversationContact } from "@/lib/crm-store";
 
 type Ctx = { params: Promise<{ tenantSlug: string }> };
 
@@ -138,6 +139,8 @@ export async function POST(req: Request, ctx: Ctx) {
     });
   }
 
+  await attachConversationContact(conversation);
+
   if (conversation.status === "handoff") {
     await prisma.message.create({
       data: {
@@ -172,6 +175,7 @@ export async function POST(req: Request, ctx: Ctx) {
   const reply = await generateAgentReply({
     tenantId: tenant.id,
     agentId: agent.id,
+    conversationId: conversation.id,
     userMessage: text,
     history: history
       .filter((m) => m.role === "user" || m.role === "assistant")

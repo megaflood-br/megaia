@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { prisma } from "@/lib/db";
+import { formatContactForPrompt, type ContactRecord } from "@/lib/crm";
 
 export function getOpenAI() {
   const key = process.env.OPENAI_API_KEY;
@@ -55,6 +56,7 @@ type AgentContext = {
     currency: string;
     durationMin: number | null;
   }[];
+  contact: ContactRecord | null;
 };
 
 function formatMoney(value: number, currency = "BRL") {
@@ -111,6 +113,11 @@ function buildSystemPrompt(ctx: AgentContext) {
     );
   }
 
+  const crm = formatContactForPrompt(ctx.contact);
+  if (crm) {
+    parts.push(crm);
+  }
+
   if (ctx.agent.useKnowledge && ctx.knowledge.length) {
     parts.push(
       "## Base de conhecimento\n" +
@@ -162,26 +169,37 @@ function buildSystemPrompt(ctx: AgentContext) {
   return parts.join("\n\n");
 }
 
-export async function loadAgentContext(tenantId: string, agentId: string) {
-  const [agent, company, knowledge, products, services] = await Promise.all([
-    prisma.agent.findFirst({ where: { id: agentId, tenantId } }),
-    prisma.companyProfile.findUnique({ where: { tenantId } }),
-    prisma.knowledgeItem.findMany({
-      where: { tenantId, isActive: true },
-      orderBy: { updatedAt: "desc" },
-      take: 40,
-    }),
-    prisma.product.findMany({
-      where: { tenantId, isActive: true },
-      orderBy: { name: "asc" },
-      take: 80,
-    }),
-    prisma.service.findMany({
-      where: { tenantId, isActive: true },
-      orderBy: { name: "asc" },
-      take: 80,
-    }),
-  ]);
+export async function loadAgentContext(
+  tenantId: string,
+  agentId: string,
+  conversationId?: string
+) {
+  const [agent, company, knowledge, products, services, conversation] =
+    await Promise.all([
+      prisma.agent.findFirst({ where: { id: agentId, tenantId } }),
+      prisma.companyProfile.findUnique({ where: { tenantId } }),
+      prisma.knowledgeItem.findMany({
+        where: { tenantId, isActive: true },
+        orderBy: { updatedAt: "desc" },
+        take: 40,
+      }),
+      prisma.product.findMany({
+        where: { tenantId, isActive: true },
+        orderBy: { name: "asc" },
+        take: 80,
+      }),
+      prisma.service.findMany({
+        where: { tenantId, isActive: true },
+        orderBy: { name: "asc" },
+        take: 80,
+      }),
+      conversationId
+        ? prisma.conversation.findFirst({
+            where: { id: conversationId, tenantId },
+            include: { contact: true },
+          })
+        : Promise.resolve(null),
+    ]);
 
   if (!agent) throw new Error("Agente não encontrado");
 
@@ -191,6 +209,7 @@ export async function loadAgentContext(tenantId: string, agentId: string) {
     knowledge,
     products,
     services,
+    contact: conversation?.contact ?? null,
   } satisfies AgentContext;
 }
 
@@ -221,8 +240,13 @@ export async function generateAgentReply(params: {
   agentId: string;
   history: { role: "user" | "assistant" | "system"; content: string }[];
   userMessage: string;
+  conversationId?: string;
 }) {
-  const ctx = await loadAgentContext(params.tenantId, params.agentId);
+  const ctx = await loadAgentContext(
+    params.tenantId,
+    params.agentId,
+    params.conversationId
+  );
   const system = buildSystemPrompt(ctx);
 
   if (shouldHandoff(params.userMessage, ctx.agent.handoffKeywords)) {

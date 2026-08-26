@@ -7,7 +7,7 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const tenantId = user.tenantId;
 
-  const [agents, knowledge, products, services, conversations, openCount] =
+  const [agents, knowledge, products, services, conversations, openCount, contacts] =
     await Promise.all([
       prisma.agent.count({ where: { tenantId } }),
       prisma.knowledgeItem.count({ where: { tenantId, isActive: true } }),
@@ -25,6 +25,7 @@ export default async function DashboardPage() {
       prisma.conversation.count({
         where: { tenantId, status: { in: ["open", "handoff"] } },
       }),
+      prisma.contact.count({ where: { tenantId } }),
     ]);
 
   const stats = [
@@ -36,6 +37,7 @@ export default async function DashboardPage() {
       href: "/app/catalog",
     },
     { label: "Conversas ativas", value: openCount, href: "/app/conversations" },
+    { label: "Contatos CRM", value: contacts, href: "/app/crm" },
   ];
 
   return (
@@ -51,7 +53,7 @@ export default async function DashboardPage() {
         </p>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map((s) => (
           <Link
             key={s.label}

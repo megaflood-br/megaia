@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { generateAgentReply } from "@/lib/openai";
+import { attachConversationContact } from "@/lib/crm-store";
 
 const schema = z.object({
   agentId: z.string(),
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
         },
       });
       conversationId = conv.id;
+      await attachConversationContact(conv);
     }
 
     await prisma.message.create({
@@ -55,6 +57,7 @@ export async function POST(req: Request) {
     const reply = await generateAgentReply({
       tenantId: user.tenantId,
       agentId: agent.id,
+      conversationId,
       userMessage: body.message,
       history: history
         .filter((m) => m.role === "user" || m.role === "assistant")

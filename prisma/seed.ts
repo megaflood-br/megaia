@@ -143,6 +143,24 @@ async function main() {
           },
         ],
       },
+      contacts: {
+        create: [
+          {
+            name: "Maria Silva",
+            phone: "5511987654321",
+            email: "maria@demo.com",
+            company: "Família Silva",
+            stage: "atendimento",
+            tags: "vip, retorno",
+            notes: "Prefere Pix. Remarcar só pela manhã.",
+            source: "whatsapp",
+            fields: JSON.stringify([
+              { label: "Convênio", value: "Amil" },
+              { label: "Unidade", value: "Paulista" },
+            ]),
+          },
+        ],
+      },
     },
   });
 

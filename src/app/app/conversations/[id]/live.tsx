@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ConversationActions } from "./actions";
 import { ConversationReply } from "./reply";
 import { useWhenVisibleInterval } from "@/lib/use-when-visible-interval";
+import { ContactCard, type ContactPayload } from "@/components/contact-card";
 
 type Msg = {
   id: string;
@@ -20,6 +21,7 @@ type Conv = {
   contactPhone: string | null;
   agent: { name: string; avatarEmoji: string | null };
   messages: Msg[];
+  contact: ContactPayload | null;
 };
 
 function roleLabel(role: string) {
@@ -39,7 +41,7 @@ export function ConversationLive({ initial }: { initial: Conv }) {
       .then((r) => r.json())
       .then((data) => {
         if (!data?.id || !Array.isArray(data.messages)) return;
-        setConv({
+        setConv((prev) => ({
           id: data.id,
           status: data.status,
           channel: data.channel,
@@ -47,7 +49,8 @@ export function ConversationLive({ initial }: { initial: Conv }) {
           contactPhone: data.contactPhone,
           agent: data.agent,
           messages: data.messages,
-        });
+          contact: data.contact ?? prev.contact,
+        }));
       })
       .catch(() => {});
   }, 2000);
@@ -93,43 +96,62 @@ export function ConversationLive({ initial }: { initial: Conv }) {
         />
       </div>
 
-      <div
-        ref={scroller}
-        className="surface max-h-[55vh] space-y-3 overflow-y-auto p-5"
-      >
-        {conv.messages.map((m) => (
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="space-y-4">
           <div
-            key={m.id}
-            className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
-              m.role === "user"
-                ? "ml-auto bg-[var(--ink)] text-white"
-                : m.role === "human"
-                  ? "bg-amber-50"
-                  : "bg-[var(--sand)]"
-            }`}
+            ref={scroller}
+            className="surface max-h-[55vh] space-y-3 overflow-y-auto p-5"
           >
-            <p className="mb-1 text-[10px] uppercase tracking-wide opacity-60">
-              {roleLabel(m.role)}
-            </p>
-            <p className="whitespace-pre-wrap">{m.content}</p>
+            {conv.messages.map((m) => (
+              <div
+                key={m.id}
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
+                  m.role === "user"
+                    ? "ml-auto bg-[var(--ink)] text-white"
+                    : m.role === "human"
+                      ? "bg-amber-50"
+                      : "bg-[var(--sand)]"
+                }`}
+              >
+                <p className="mb-1 text-[10px] uppercase tracking-wide opacity-60">
+                  {roleLabel(m.role)}
+                </p>
+                <p className="whitespace-pre-wrap">{m.content}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <ConversationReply
-        conversationId={conv.id}
-        channel={conv.channel}
-        closed={conv.status === "closed"}
-        onSent={(message) => {
-          setConv((prev) => ({
-            ...prev,
-            status: "handoff",
-            messages: prev.messages.some((m) => m.id === message.id)
-              ? prev.messages
-              : [...prev.messages, message],
-          }));
-        }}
-      />
+          <ConversationReply
+            conversationId={conv.id}
+            channel={conv.channel}
+            closed={conv.status === "closed"}
+            onSent={(message) => {
+              setConv((prev) => ({
+                ...prev,
+                status: "handoff",
+                messages: prev.messages.some((m) => m.id === message.id)
+                  ? prev.messages
+                  : [...prev.messages, message],
+              }));
+            }}
+          />
+        </div>
+
+        {conv.contact && (
+          <ContactCard
+            compact
+            contact={conv.contact}
+            onSaved={(contact) =>
+              setConv((prev) => ({
+                ...prev,
+                contact,
+                contactName: contact.name,
+                contactPhone: contact.phone,
+              }))
+            }
+          />
+        )}
+      </div>
     </div>
   );
 }
