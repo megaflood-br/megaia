@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ConversationActions } from "./actions";
+import { ConversationReply } from "./reply";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -28,7 +29,7 @@ export default async function ConversationDetailPage({ params }: Props) {
             href="/app/conversations"
             className="text-sm font-semibold text-[var(--teal)]"
           >
-            ← Conversas
+            ← Inbox
           </Link>
           <h1 className="mt-2 font-display text-3xl font-semibold">
             {conversation.contactName ||
@@ -41,8 +42,8 @@ export default async function ConversationDetailPage({ params }: Props) {
           </p>
           {conversation.status === "handoff" && (
             <p className="mt-2 max-w-xl text-sm text-amber-800">
-              IA pausada. Respostas enviadas por você no WhatsApp entram como
-              atendente. Use Reabrir / IA para a IA voltar a responder.
+              IA pausada. Responda pelo campo abaixo (vai para o WhatsApp) ou
+              use Reabrir / IA para o agente voltar.
             </p>
           )}
         </div>
@@ -77,6 +78,12 @@ export default async function ConversationDetailPage({ params }: Props) {
           </div>
         ))}
       </div>
+
+      <ConversationReply
+        conversationId={conversation.id}
+        channel={conversation.channel}
+        closed={conversation.status === "closed"}
+      />
     </div>
   );
 }

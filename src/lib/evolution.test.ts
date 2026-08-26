@@ -103,6 +103,23 @@ describe("isBotOutboundEcho", () => {
     );
   });
 
+  it("treats matching recent human panel reply as echo", () => {
+    assert.equal(
+      isBotOutboundEcho({
+        fromMe: true,
+        text: "Já te atendo por aqui.",
+        recentAssistant: [
+          {
+            content: "Já te atendo por aqui.",
+            externalMsgId: "HUM-1",
+            createdAt: new Date(),
+          },
+        ],
+      }),
+      true
+    );
+  });
+
   it("does not treat inbound customer messages as echo", () => {
     assert.equal(
       isBotOutboundEcho({
