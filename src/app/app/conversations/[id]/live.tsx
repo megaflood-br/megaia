@@ -138,18 +138,20 @@ export function ConversationLive({ initial }: { initial: Conv }) {
         </div>
 
         {conv.contact && (
-          <ContactCard
-            compact
-            contact={conv.contact}
-            onSaved={(contact) =>
-              setConv((prev) => ({
-                ...prev,
-                contact,
-                contactName: contact.name,
-                contactPhone: contact.phone,
-              }))
-            }
-          />
+          <div className="xl:sticky xl:top-4 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto">
+            <ContactCard
+              compact
+              contact={conv.contact}
+              onSaved={(contact) =>
+                setConv((prev) => ({
+                  ...prev,
+                  contact,
+                  contactName: contact.name,
+                  contactPhone: contact.phone,
+                }))
+              }
+            />
+          </div>
         )}
       </div>
     </div>
