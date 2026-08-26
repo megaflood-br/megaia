@@ -7,10 +7,12 @@ export function ConversationReply({
   conversationId,
   channel,
   closed,
+  onSent,
 }: {
   conversationId: string;
   channel: string;
   closed: boolean;
+  onSent?: (message: { id: string; role: string; content: string }) => void;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -30,11 +32,14 @@ export function ConversationReply({
     });
     const data = await res.json();
     setSending(false);
-    if (data.message) setText("");
+    if (data.message) {
+      setText("");
+      onSent?.(data.message);
+    }
     if (!res.ok || data.error) {
       setError(data.error || "Não foi possível enviar");
     }
-    router.refresh();
+    if (!onSent) router.refresh();
   }
 
   return (

@@ -6,9 +6,11 @@ import { useState } from "react";
 export function ConversationActions({
   id,
   status,
+  onStatusChange,
 }: {
   id: string;
   status: string;
+  onStatusChange?: (status: string) => void;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -21,6 +23,7 @@ export function ConversationActions({
       body: JSON.stringify({ status: next }),
     });
     setLoading(false);
+    onStatusChange?.(next);
     router.refresh();
   }
 
